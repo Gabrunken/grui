@@ -25,6 +25,15 @@ enum ContainerType
 	Column
 };
 
+struct ContainerStyle
+{
+    int borderWidth;
+    Color borderColor;
+    Color fillColor;
+    float roundness; //0 to 1
+    const char* title;
+};
+
 /*
  * @brief Initializes the library.
  * You must call this before calling any library function.
@@ -59,7 +68,9 @@ void GRUI_BeginContainer(
     float width, float height,
     float originX, float originY,
     enum ContainerAlignment alignment, enum ContainerType type,
-    const Vector2* scroll);
+    const Vector2* scroll,
+    float margin,
+    const struct ContainerStyle* containerStyle);
 
 /*
  * todo doc

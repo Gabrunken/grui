@@ -191,7 +191,9 @@ void GRUI_BeginContainer(
     float width, float height,
     float originX, float originY,
     enum ContainerAlignment alignment, enum ContainerType type,
-    const Vector2* scroll)
+    const Vector2* scroll,
+    float margin,
+    const struct ContainerStyle* containerStyle)
 {
 	GRUI_ASSERT(frameContext.hasBegun);
 
@@ -214,21 +216,6 @@ void GRUI_BeginContainer(
 
 	BeginScissorMode(container.uiElement.rect.x, container.uiElement.rect.y, container.uiElement.rect.width, container.uiElement.rect.height);
 
-	/*
-	 * Draw this on a separate call (es: GRUI_GroupBox/GRUI_Panel)
-	if (IsShaderReady(context.shader)) //If the context has any shader
-	{
-        BeginShaderMode(context.shader);
-        	DrawRectangleRec(container.uiElement.rect, WHITE);
-        EndShaderMode();
-    }
-
-	else
-	{
-		DrawRectangleRec(container.uiElement.rect, WHITE); //Draw with default shader
-	}
-	*/
-
 	//Lock input outside of this Container
 	if (!CheckCollisionPointRec(frameContext.mousePosition, container.uiElement.rect))
     {
@@ -239,6 +226,44 @@ void GRUI_BeginContainer(
     {
         GuiUnlock();
     }
+
+	if (containerStyle->fillColor.a != 0)
+	{
+		if (IsShaderReady(context.shader)) //If the context has any shader
+		{
+	        BeginShaderMode(context.shader);
+	       	DrawRectangleRounded(
+				container.uiElement.rect,
+				containerStyle->roundness,
+				20,
+				containerStyle->fillColor);
+	        EndShaderMode();
+    	}
+
+		else
+		{
+			DrawRectangleRounded(
+				container.uiElement.rect,
+				containerStyle->roundness + 0.06f /* or else the outline does not fit right... */,
+				20,
+				containerStyle->fillColor);
+    	}
+	}
+
+	if (containerStyle->borderWidth > 0 && containerStyle->borderColor.a != 0)
+	{
+		DrawRectangleRoundedLines(
+			(Rectangle){
+				container.uiElement.rect.x + containerStyle->borderWidth,
+				container.uiElement.rect.y + containerStyle->borderWidth,
+				container.uiElement.rect.width - (containerStyle->borderWidth * 2),
+				container.uiElement.rect.height - (containerStyle->borderWidth * 2),
+			} /*Make an INNER outline, not OUTER*/,
+			containerStyle->roundness,
+			20,
+			containerStyle->borderWidth,
+			containerStyle->borderColor);
+	}
 }
 
 void GRUI_EndContainer(Vector2* scroll)
