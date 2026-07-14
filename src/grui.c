@@ -11,11 +11,31 @@
 #define GRUI_WARNING(caller, format, ...) printf("\033[33m" caller " Warning: " format "\n" __VA_OPT__(, __VA_ARGS__) "\033[39m");
 #define GRUI_ERROR(caller, format, ...) printf("\033[31m" caller " Warning: " format "\n" __VA_OPT__(, __VA_ARGS__) "\033[39m");
 
+struct UIElement
+{
+	Rectangle rect;
+	Vector2 origin;
+};
+
+struct RayGUIStyle
+{
+	int backgroundColor;
+	int borderWidth;
+};
+
 struct GRUIContext
 {
 	bool initialized;
 	dyarray containerStack;
 	Shader shader;
+	struct RayGUIStyle originalStyle;
+};
+
+struct GRUIFrameContext
+{
+	Vector2 mousePosition;
+	Vector2 windowSize;
+	bool hasBegun;
 };
 
 struct Container
@@ -23,18 +43,25 @@ struct Container
 	struct UIElement uiElement;
 	enum ContainerAlignment alignment;
 	enum ContainerType type;
-	dyarray elements; //Contains Rectangles
-	float contentPixelSize;
+	float contentPixelSize; //Represents the current size of the content in this container, in the corresponding axis of the container's type (Row X, Column Y)
 	Vector2 scroll;
 };
 
 static struct GRUIContext context;
+static struct GRUIFrameContext frameContext;
 
 bool GRUI_Init()
 {
 	if (context.initialized) {GRUI_WARNING("GRUI_Init", "context is already initialized"); return true;}
+	GRUI_ASSERT(IsWindowReady());
 
 	if (!DYArrayCreate(&context.containerStack, sizeof(struct Container), 10)) {GRUI_ERROR("GRUI_Init", "failed to create containerStack"); return false;}
+
+	context.originalStyle.backgroundColor = GuiGetStyle(DEFAULT, BACKGROUND_COLOR);
+	context.originalStyle.borderWidth = GuiGetStyle(DEFAULT, BORDER_WIDTH);
+
+	GuiSetStyle(DEFAULT, BACKGROUND_COLOR, ColorToInt(BLANK));
+	GuiSetStyle(DEFAULT, BORDER_WIDTH, 0);
 
 	context.initialized = true;
 	return true;
@@ -44,26 +71,39 @@ void GRUI_CleanUp()
 {
 	if (!context.initialized) {GRUI_WARNING("GRUI_CleanUp", "context is not initialized"); return;}
 
-	for (size_t i = 0; i < context.containerStack.elementCount; i++)
-	{
-		struct Container* container = DYArrayGetElement(&context.containerStack, i);
-		DYArrayFree(&container->elements);
-	}
+	GuiSetStyle(DEFAULT, BACKGROUND_COLOR, context.originalStyle.backgroundColor);
+	GuiSetStyle(DEFAULT, BORDER_WIDTH, context.originalStyle.borderWidth);
 
 	DYArrayFree(&context.containerStack);
 }
 
+void GRUI_BeginFrame()
+{
+	GRUI_ASSERT(context.initialized && !frameContext.hasBegun);
+	frameContext.hasBegun = true;
+
+	frameContext.mousePosition = GetMousePosition();
+	frameContext.windowSize = (Vector2){GetScreenWidth(), GetScreenHeight()};
+}
+
+void GRUI_EndFrame()
+{
+	GRUI_ASSERT(frameContext.hasBegun);
+	frameContext.hasBegun = false;
+
+	//Clear out any unclosed containers
+	context.containerStack.elementCount = 0;
+}
+
 void GRUI_SetShader(Shader shader)
 {
-	GRUI_ASSERT(context.initialized && IsWindowReady());
+	GRUI_ASSERT(context.initialized);
 
 	context.shader = shader;
 }
 
 Vector2 _GRUI_GetAnchorFromAlignment(enum ContainerAlignment alignment)
 {
-	GRUI_ASSERT(context.initialized && IsWindowReady());
-
 	switch (alignment)
 	{
 	case TopLeft:
@@ -88,9 +128,7 @@ Vector2 _GRUI_GetAnchorFromAlignment(enum ContainerAlignment alignment)
 //Also stacks up the current element size in the container's contentPixelSize param.
 void _GRUI_AdjustRect(struct UIElement* element)
 {
-	GRUI_ASSERT(context.initialized && IsWindowReady());
-
-	GRUI_ASSERT(element);
+	GRUI_ASSERT(frameContext.hasBegun && element);
 
 	if (context.containerStack.elementCount > 0)
 	{
@@ -137,54 +175,75 @@ void _GRUI_AdjustRect(struct UIElement* element)
 	}
 
 	//Use window bounds as a generic container
-	element->rect.width *= GetScreenWidth();
-	element->rect.height *= GetScreenHeight();
+	element->rect.width *= frameContext.windowSize.x;
+	element->rect.height *= frameContext.windowSize.y;
 
 	Vector2 originOffset;
 	originOffset.x = element->origin.x * element->rect.width;
-	element->rect.x = element->rect.x * GetScreenWidth() - originOffset.x;
+	element->rect.x = element->rect.x * frameContext.windowSize.x - originOffset.x;
 
 	originOffset.y = element->origin.y * element->rect.height;
-	element->rect.y = element->rect.y * GetScreenHeight() - originOffset.y;
+	element->rect.y = element->rect.y * frameContext.windowSize.y - originOffset.y;
 }
 
-void GRUI_BeginContainer(struct UIElement* format, enum ContainerAlignment alignment, enum ContainerType type, const Vector2* scroll)
+void GRUI_BeginContainer(
+    float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    enum ContainerAlignment alignment, enum ContainerType type,
+    const Vector2* scroll)
 {
-	GRUI_ASSERT(context.initialized && IsWindowReady());
-
-	if (!format)
-	{
-		GRUI_WARNING("GRUI_BeginContainer", "format is NULL");
-		return;
-	}
+	GRUI_ASSERT(frameContext.hasBegun);
 
 	struct Container container = {0};
 	container.alignment = alignment;
 	container.type = type;
 	container.scroll = *scroll;
 
-	_GRUI_AdjustRect(format);
+	struct UIElement uiElement;
+	container.uiElement.rect.x = posX;
+	container.uiElement.rect.y = posY;
+	container.uiElement.rect.width = width;
+	container.uiElement.rect.height = height;
+	container.uiElement.origin.x = originX;
+	container.uiElement.origin.y = originY;
 
-	memcpy(&container.uiElement, format, sizeof(struct UIElement));
-	DYArrayCreate(&container.elements, sizeof(struct Rectangle), 10);
+	_GRUI_AdjustRect(&container.uiElement);
+
 	DYArrayAddElement(&context.containerStack, &container);
 
-	BeginScissorMode(format->rect.x, format->rect.y, format->rect.width, format->rect.height);
+	BeginScissorMode(container.uiElement.rect.x, container.uiElement.rect.y, container.uiElement.rect.width, container.uiElement.rect.height);
 
+	/*
+	 * Draw this on a separate call (es: GRUI_GroupBox/GRUI_Panel)
 	if (IsShaderReady(context.shader)) //If the context has any shader
 	{
         BeginShaderMode(context.shader);
         	DrawRectangleRec(container.uiElement.rect, WHITE);
         EndShaderMode();
-        return;
-	}
+    }
 
-	DrawRectangleRec(container.uiElement.rect, WHITE); //Draw with default shader
+	else
+	{
+		DrawRectangleRec(container.uiElement.rect, WHITE); //Draw with default shader
+	}
+	*/
+
+	//Lock input outside of this Container
+	if (!CheckCollisionPointRec(frameContext.mousePosition, container.uiElement.rect))
+    {
+        GuiLock();
+    }
+
+    else
+    {
+        GuiUnlock();
+    }
 }
 
 void GRUI_EndContainer(Vector2* scroll)
 {
-	GRUI_ASSERT(context.initialized && IsWindowReady());
+	GRUI_ASSERT(frameContext.hasBegun);
 
 	if (context.containerStack.elementCount == 0)
 	{
@@ -196,44 +255,83 @@ void GRUI_EndContainer(Vector2* scroll)
 
 	Rectangle view;
 	Rectangle content;
-	if (container->type == Row) {content.width = container->contentPixelSize; content.height = container->uiElement.rect.height;}
-	else {content.height = container->contentPixelSize; content.width = container->uiElement.rect.width - 20;}
+	if (container->type == Row) {content.width = container->contentPixelSize - 20; content.height = container->uiElement.rect.height - 20;}
+	else {content.height = container->contentPixelSize - 20; content.width = container->uiElement.rect.width - 20;}
 	content.x = container->uiElement.rect.x;
 	content.y = container->uiElement.rect.y;
 
-	int originalBg = GuiGetStyle(DEFAULT, BACKGROUND_COLOR);
-	int originalBorderWidth = GuiGetStyle(DEFAULT, BORDER_WIDTH);
-	GuiSetStyle(DEFAULT, BACKGROUND_COLOR, ColorToInt(BLANK));
-	GuiSetStyle(DEFAULT, BORDER_WIDTH, 0);
-
 	GuiScrollPanel(container->uiElement.rect, NULL, content, scroll, &view);
 
-	GuiSetStyle(DEFAULT, BACKGROUND_COLOR, originalBg);
-	GuiSetStyle(DEFAULT, BORDER_WIDTH, 0);
-
 	EndScissorMode();
+	GuiUnlock();
 
-	DYArrayFree(&container->elements);
 	DYArrayRemoveElementSP(&context.containerStack, context.containerStack.elementCount - 1);
 }
 
-bool GRUI_Button(struct UIElement* uiElement, const char *text)
+bool _GRUI_IsElementCullable(Rectangle elementRect)
 {
-	GRUI_ASSERT(context.initialized && IsWindowReady());
+	GRUI_ASSERT(frameContext.hasBegun);
+
+	if (context.containerStack.elementCount > 0)
+	{
+		struct Container* container = DYArrayGetElement(&context.containerStack, context.containerStack.elementCount - 1);
+		if (CheckCollisionRecs(container->uiElement.rect, elementRect))
+		{
+			return false;
+		}
+	}
+
+	else
+	{
+		if (CheckCollisionRecs((Rectangle){0,0,frameContext.windowSize.x,frameContext.windowSize.y}, elementRect))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+//======================= Primitives =======================\\
+
+bool GRUI_Button(
+    float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    const char* text)
+{
+	GRUI_ASSERT(frameContext.hasBegun);
 
 	if (!text)
 	{
 		GRUI_WARNING("GRUI_Button", "text is NULL");
-		return false;
 	}
 
-	if (!uiElement)
-	{
-		GRUI_WARNING("GRUI_Button", "uiElement is NULL");
+	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
+	_GRUI_AdjustRect(&uiElement);
+
+	if (_GRUI_IsElementCullable(uiElement.rect))
 		return false;
-	}
 
-	_GRUI_AdjustRect(uiElement);
-
-	return GuiButton(uiElement->rect, text);
+	return GuiButton(uiElement.rect, text);
 }
+
+void GRUI_GroupBox(
+    float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    const char* title
+)
+{
+	GRUI_ASSERT(frameContext.hasBegun);
+
+	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
+	_GRUI_AdjustRect(&uiElement);
+
+	if (_GRUI_IsElementCullable(uiElement.rect))
+		return;
+
+	GuiGroupBox(uiElement.rect, title);
+}
+
+//==============================================\\

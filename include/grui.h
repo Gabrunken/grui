@@ -11,12 +11,6 @@
  * useful for both quick prototyping and full applications.
  */
 
-struct UIElement
-{
-	Rectangle rect;
-	Vector2 origin;
-};
-
 enum ContainerAlignment
 {
 	TopLeft,
@@ -50,7 +44,22 @@ void GRUI_CleanUp();
 /*
  * todo doc
  */
-void GRUI_BeginContainer(struct UIElement* format, enum ContainerAlignment alignment, enum ContainerType type, const Vector2* scroll);
+void GRUI_BeginFrame();
+
+/*
+ * todo doc
+ */
+void GRUI_EndFrame();
+
+/*
+ * todo doc
+ */
+void GRUI_BeginContainer(
+    float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    enum ContainerAlignment alignment, enum ContainerType type,
+    const Vector2* scroll);
 
 /*
  * todo doc
@@ -68,6 +77,20 @@ void GRUI_SetShader(Shader shader);
  * Renders and handles input for a simple text button.
  * @return True if clicked, False if not.
  */
-bool GRUI_Button(struct UIElement* format, const char* text);
+bool GRUI_Button(
+    float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    const char* text);
+
+/*
+ * todo doc
+ */
+void GRUI_GroupBox(
+    float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    const char* title
+);
 
 #endif
