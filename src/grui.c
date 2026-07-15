@@ -3,9 +3,13 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#ifndef GRUI_DONT_IMPLEMENT_DYARRAY
 #define DYARRAY_IMPL
+#endif
 #include <dyarray.h>
+#ifndef GRUI_DONT_IMPLEMENT_RAYGUI
 #define RAYGUI_IMPLEMENTATION
+#endif
 #include <raygui.h>
 
 #define GRUI_ASSERT(condition) do {if (!condition) exit(1);} while(0)
