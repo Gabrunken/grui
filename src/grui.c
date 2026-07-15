@@ -45,6 +45,8 @@ struct Container
 	enum ContainerType type;
 	float contentPixelSize; //Represents the current size of the content in this container, in the corresponding axis of the container's type (Row X, Column Y)
 	Vector2 scroll;
+	float outerMargin;
+	float elementMargin;
 };
 
 static struct GRUIContext context;
@@ -143,29 +145,68 @@ void _GRUI_AdjustRect(struct UIElement* element)
 		originOffset.x = element->origin.x * element->rect.width;
 		originOffset.y = element->origin.y * element->rect.height;
 
+		float smallerSide = parent->uiElement.rect.width < parent->uiElement.rect.height ? parent->uiElement.rect.width : parent->uiElement.rect.height;
+		float finalMargin = parent->outerMargin * smallerSide;
+
+		//Row
 		if (parent->type == Row)
 		{
 			element->rect.y = element->origin.y * parent->uiElement.rect.height + parent->uiElement.rect.y - originOffset.y;
-			element->rect.x = element->origin.x * parent->uiElement.rect.width + parent->uiElement.rect.x - originOffset.x + parent->contentPixelSize;
-			parent->contentPixelSize += element->rect.width + 0.008 * parent->uiElement.rect.width /* fixed margin */;
+
+			if (element->origin.x == 0.0f)
+			{
+				element->rect.x =
+					element->origin.x * parent->uiElement.rect.width + parent->uiElement.rect.x - originOffset.x + parent->contentPixelSize + finalMargin;
+			}
+
+			else if (element->origin.x == 1.0f)
+			{
+				element->rect.x =
+					element->origin.x * parent->uiElement.rect.width + parent->uiElement.rect.x - originOffset.x - parent->contentPixelSize - finalMargin;
+			}
+
+			if (element->origin.y == 0.0f) //Top
+			{
+				element->rect.y += finalMargin;
+			}
+
+			else if (element->origin.y == 1.0f) //Bottom
+			{
+				element->rect.y -= finalMargin;
+			}
+
+			parent->contentPixelSize += element->rect.width + parent->elementMargin * parent->uiElement.rect.width /* fixed margin */;
 		}
 
-		else
+		//Column
+		else if (parent->type == Column)
 		{
 			element->rect.x = element->origin.x * parent->uiElement.rect.width + parent->uiElement.rect.x - originOffset.x;
 
 			//Alignment
 			if (element->origin.y == 0.0f)
 			{
-				element->rect.y = element->origin.y * parent->uiElement.rect.height + parent->uiElement.rect.y - originOffset.y + parent->contentPixelSize;
+				element->rect.y =
+					element->origin.y * parent->uiElement.rect.height + parent->uiElement.rect.y - originOffset.y + parent->contentPixelSize + finalMargin;
 			}
 
 			else if (element->origin.y == 1.0f)
 			{
-				element->rect.y = element->origin.y * parent->uiElement.rect.height + parent->uiElement.rect.y - originOffset.y - parent->contentPixelSize;
+				element->rect.y =
+					element->origin.y * parent->uiElement.rect.height + parent->uiElement.rect.y - originOffset.y - parent->contentPixelSize - finalMargin;
 			}
 
-			parent->contentPixelSize += element->rect.height + 0.008 * parent->uiElement.rect.height /* fixed margin */;
+			if (element->origin.x == 0.0f) //Left
+			{
+				element->rect.x += finalMargin;
+			}
+
+			else if (element->origin.x == 1.0f) //Right
+			{
+				element->rect.x -= finalMargin;
+			}
+
+			parent->contentPixelSize += element->rect.height + parent->elementMargin * parent->uiElement.rect.height /* fixed margin */;
 		}
 
 		element->rect.x += parent->scroll.x;
@@ -192,7 +233,8 @@ void GRUI_BeginContainer(
     float originX, float originY,
     enum ContainerAlignment alignment, enum ContainerType type,
     const Vector2* scroll,
-    float margin,
+    float outerMargin,
+    float elementMargin,
     const struct ContainerStyle* containerStyle)
 {
 	GRUI_ASSERT(frameContext.hasBegun);
@@ -209,6 +251,8 @@ void GRUI_BeginContainer(
 	container.uiElement.rect.height = height;
 	container.uiElement.origin.x = originX;
 	container.uiElement.origin.y = originY;
+	container.outerMargin = outerMargin;
+	container.elementMargin = elementMargin;
 
 	_GRUI_AdjustRect(&container.uiElement);
 

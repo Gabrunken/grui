@@ -49,8 +49,23 @@ int main()
 
 		GRUI_BeginFrame();
 
-		GRUI_BeginContainer(0.0f, 0.0f, 1.0f, 0.15f, 0.0f, 0.0f, BottomLeft, Row, &scroll, 0.01, &defaultContainerStyle);
+		GRUI_BeginContainer(0.0f, 0.0f, 1.0f, 0.15f, 0.0f, 0.0f, TopLeft, Row, &scroll, 0.2f, 0.01f, &defaultContainerStyle);
 
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
+		GRUI_Button(0, 0, 0.1, 0.2, 0, 0, "Button");
 
 
 		GRUI_EndContainer(&scroll);

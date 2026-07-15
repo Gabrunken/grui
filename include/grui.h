@@ -70,6 +70,7 @@ void GRUI_BeginContainer(
     enum ContainerAlignment alignment, enum ContainerType type,
     const Vector2* scroll,
     float margin,
+    float elementMargin,
     const struct ContainerStyle* containerStyle);
 
 /*
