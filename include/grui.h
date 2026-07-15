@@ -1,6 +1,7 @@
 #ifndef GRUI_H_
 #define GRUI_H_
 #include <raylib.h>
+#include <stdint.h>
 
 #define GRUI_NULL_SHADER (Shader){0}
 
@@ -69,9 +70,10 @@ void GRUI_BeginContainer(
     float originX, float originY,
     enum ContainerAlignment alignment, enum ContainerType type,
     const Vector2* scroll,
-    float margin,
+    float outerMargin,
     float elementMargin,
-    const struct ContainerStyle* containerStyle);
+    const struct ContainerStyle* containerStyle,
+    bool maintainAspectRatio);
 
 /*
  * todo doc
@@ -93,16 +95,51 @@ bool GRUI_Button(
     float posX, float posY,
     float width, float height,
     float originX, float originY,
-    const char* text);
+    const char* text,
+    bool maintainAspectRatio
+);
 
 /*
  * todo doc
  */
-void GRUI_GroupBox(
+void GRUI_ColorPicker(
     float posX, float posY,
     float width, float height,
     float originX, float originY,
-    const char* title
+    Color* outColor,
+    bool maintainAspectRatio
+);
+
+/*
+ * This box's text is meant to be used for single-word, short texts,
+ * since it does not expand, but shrinks the font size to fit the rect.
+ * Consider using a label combined with a Container to make a CheckBox + Label combo.
+ */
+void GRUI_CheckBox(
+	float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    const char *text,
+    bool* outBool,
+    bool maintainAspectRatio
+);
+
+void GRUI_SelectableList(
+	float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    const char **elements,
+    size_t elementCount,
+    int* outScrollIndex,
+    int* outActive,
+    bool maintainAspectRatio
+);
+
+void GRUI_Label(
+    float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    const char *text
 );
 
 #endif

@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include <grui.h>
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #define DYARRAY_IMPL
@@ -21,6 +22,9 @@ struct RayGUIStyle
 {
 	int backgroundColor;
 	int borderWidth;
+	int hueBarWidth;
+	int hueBarPadding;
+	int textSize;
 };
 
 struct GRUIContext
@@ -61,9 +65,13 @@ bool GRUI_Init()
 
 	context.originalStyle.backgroundColor = GuiGetStyle(DEFAULT, BACKGROUND_COLOR);
 	context.originalStyle.borderWidth = GuiGetStyle(DEFAULT, BORDER_WIDTH);
+	context.originalStyle.hueBarWidth = GuiGetStyle(COLORPICKER, HUEBAR_WIDTH);
+	context.originalStyle.hueBarPadding = GuiGetStyle(COLORPICKER, HUEBAR_PADDING);
+	context.originalStyle.textSize = GuiGetStyle(DEFAULT, TEXT_SIZE);
 
 	GuiSetStyle(DEFAULT, BACKGROUND_COLOR, ColorToInt(BLANK));
 	GuiSetStyle(DEFAULT, BORDER_WIDTH, 0);
+	GuiSetStyle(CHECKBOX, BORDER_WIDTH, 1);
 
 	context.initialized = true;
 	return true;
@@ -75,6 +83,9 @@ void GRUI_CleanUp()
 
 	GuiSetStyle(DEFAULT, BACKGROUND_COLOR, context.originalStyle.backgroundColor);
 	GuiSetStyle(DEFAULT, BORDER_WIDTH, context.originalStyle.borderWidth);
+	GuiSetStyle(COLORPICKER, HUEBAR_WIDTH, context.originalStyle.hueBarWidth);
+	GuiSetStyle(COLORPICKER, HUEBAR_PADDING, context.originalStyle.hueBarPadding);
+	GuiSetStyle(DEFAULT, TEXT_SIZE, context.originalStyle.textSize);
 
 	DYArrayFree(&context.containerStack);
 }
@@ -126,9 +137,22 @@ Vector2 _GRUI_GetAnchorFromAlignment(enum ContainerAlignment alignment)
 	}
 }
 
+void _GRUI_AdjustTextSizeToRect(Vector2 rectSize, const char* text)
+{
+	int fontSize = GuiGetStyle(DEFAULT, TEXT_SIZE);
+
+	Vector2 baseMeasure = MeasureTextEx(GuiGetFont(), text, fontSize, GuiGetStyle(DEFAULT, TEXT_SPACING));
+
+	Vector2 scaleFactor = {rectSize.x / baseMeasure.x, rectSize.y / baseMeasure.y};
+
+	float finalScaleFactor = fmin(scaleFactor.x, scaleFactor.y);
+
+	GuiSetStyle(DEFAULT, TEXT_SIZE, fontSize * finalScaleFactor);
+}
+
 //Adjusts the passed ui element to fit the last container in the stack.
 //Also stacks up the current element size in the container's contentPixelSize param.
-void _GRUI_AdjustRect(struct UIElement* element)
+void _GRUI_AdjustRect(struct UIElement* element, bool maintainAspectRatio)
 {
 	GRUI_ASSERT(frameContext.hasBegun && element);
 
@@ -136,8 +160,33 @@ void _GRUI_AdjustRect(struct UIElement* element)
 	{
 		struct Container* parent = DYArrayGetElement(&context.containerStack, context.containerStack.elementCount - 1); //Last element
 
-		element->rect.width *= parent->uiElement.rect.width;
-		element->rect.height *= parent->uiElement.rect.height;
+		if (parent->type == Row)
+		{
+			element->rect.height *= parent->uiElement.rect.height;
+			if (maintainAspectRatio)
+			{
+				element->rect.width = element->rect.height;
+			}
+
+			else
+			{
+				element->rect.width *= parent->uiElement.rect.width;
+			}
+		}
+
+		else if (parent->type == Column)
+		{
+			element->rect.width *= parent->uiElement.rect.width;
+			if (maintainAspectRatio)
+			{
+				element->rect.height = element->rect.width;
+			}
+
+			else
+			{
+				element->rect.height *= parent->uiElement.rect.height;
+			}
+		}
 
 		element->origin = _GRUI_GetAnchorFromAlignment(parent->alignment);
 
@@ -217,7 +266,15 @@ void _GRUI_AdjustRect(struct UIElement* element)
 
 	//Use window bounds as a generic container
 	element->rect.width *= frameContext.windowSize.x;
-	element->rect.height *= frameContext.windowSize.y;
+	if (maintainAspectRatio)
+	{
+		element->rect.height = element->rect.width;
+	}
+
+	else
+	{
+		element->rect.height *= frameContext.windowSize.y;
+	}
 
 	Vector2 originOffset;
 	originOffset.x = element->origin.x * element->rect.width;
@@ -235,7 +292,9 @@ void GRUI_BeginContainer(
     const Vector2* scroll,
     float outerMargin,
     float elementMargin,
-    const struct ContainerStyle* containerStyle)
+    const struct ContainerStyle* containerStyle,
+    bool maintainAspectRatio
+)
 {
 	GRUI_ASSERT(frameContext.hasBegun);
 
@@ -254,7 +313,7 @@ void GRUI_BeginContainer(
 	container.outerMargin = outerMargin;
 	container.elementMargin = elementMargin;
 
-	_GRUI_AdjustRect(&container.uiElement);
+	_GRUI_AdjustRect(&container.uiElement, maintainAspectRatio);
 
 	DYArrayAddElement(&context.containerStack, &container);
 
@@ -367,7 +426,9 @@ bool GRUI_Button(
     float posX, float posY,
     float width, float height,
     float originX, float originY,
-    const char* text)
+    const char* text,
+    bool maintainAspectRatio
+)
 {
 	GRUI_ASSERT(frameContext.hasBegun);
 
@@ -377,30 +438,124 @@ bool GRUI_Button(
 	}
 
 	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
-	_GRUI_AdjustRect(&uiElement);
+	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
 
 	if (_GRUI_IsElementCullable(uiElement.rect))
 		return false;
 
+	_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width, uiElement.rect.height}, text);
 	return GuiButton(uiElement.rect, text);
 }
 
-void GRUI_GroupBox(
+void GRUI_ColorPicker(
     float posX, float posY,
     float width, float height,
     float originX, float originY,
-    const char* title
+    Color* outColor,
+    bool maintainAspectRatio
 )
 {
 	GRUI_ASSERT(frameContext.hasBegun);
 
 	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
-	_GRUI_AdjustRect(&uiElement);
+	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
+
+	if (context.containerStack.elementCount > 0)
+	{
+		struct Container* container = DYArrayGetElement(&context.containerStack, context.containerStack.elementCount - 1);
+
+		float newWidth, newPadding;
+		newWidth = uiElement.rect.width * 0.1f;
+		newPadding = uiElement.rect.width * 0.05f;
+
+		GuiSetStyle(COLORPICKER, HUEBAR_WIDTH, newWidth);
+		GuiSetStyle(COLORPICKER, HUEBAR_PADDING, newPadding);
+
+		if (container->type == Row)
+		{
+			container->contentPixelSize += newWidth + newPadding; //The color picker does not count the bar
+		}
+	}
 
 	if (_GRUI_IsElementCullable(uiElement.rect))
 		return;
 
-	GuiGroupBox(uiElement.rect, title);
+	GuiColorPicker(uiElement.rect, NULL, outColor);
+}
+
+void GRUI_CheckBox(
+	float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    const char *text,
+    bool* outBool,
+    bool maintainAspectRatio
+)
+{
+	GRUI_ASSERT(frameContext.hasBegun);
+
+	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
+	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
+
+	_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width, uiElement.rect.height}, text);
+
+	if (context.containerStack.elementCount > 0)
+	{
+		struct Container* container = DYArrayGetElement(&context.containerStack, context.containerStack.elementCount - 1);
+
+		float fontSize = (float)GuiGetStyle(DEFAULT, TEXT_SIZE);
+		float spacing = (float)GuiGetStyle(DEFAULT, TEXT_SPACING);
+
+		Vector2 textSize = MeasureTextEx(GuiGetFont(), text, fontSize, spacing);
+
+		if (container->type == Row)
+		{
+			container->contentPixelSize += textSize.x + GuiGetStyle(CHECKBOX, TEXT_PADDING); //Count the text size
+		}
+	}
+
+	if (_GRUI_IsElementCullable(uiElement.rect))
+		return;
+
+	GuiCheckBox(uiElement.rect, text, outBool);
+}
+
+void GRUI_SelectableList(
+	float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    const char **elements,
+    size_t elementCount,
+    int* outScrollIndex,
+    int* outActive,
+    bool maintainAspectRatio
+)
+{
+	GRUI_ASSERT(frameContext.hasBegun);
+
+	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
+	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
+
+	_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width * 0.5, uiElement.rect.height * 0.5}, "Prova");
+
+	GuiListViewEx(uiElement.rect, elements, elementCount, outScrollIndex, outActive, NULL);
+}
+
+void GRUI_Label(
+    float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    const char *text
+)
+{
+	GRUI_ASSERT(frameContext.hasBegun);
+
+	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
+	_GRUI_AdjustRect(&uiElement, false);
+
+	_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width, uiElement.rect.height}, text);
+
+	GuiLabel(uiElement.rect, text);
 }
 
 //==============================================\\
