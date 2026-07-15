@@ -38,9 +38,7 @@ struct ContainerStyle
 /*
  * @brief Initializes the library.
  * You must call this before calling any library function.
- * GRUI initialization does not require previous raylib setup,
- * but any other function, besides the clean up, does require raylib
- * to be initialized with InitWindow.
+ * GRUI initialization does require previous raylib setup.
  * @return True on success, False on failure.
  */
 bool GRUI_Init();
