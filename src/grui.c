@@ -143,6 +143,11 @@ Vector2 _GRUI_GetAnchorFromAlignment(enum ContainerAlignment alignment)
 
 void _GRUI_AdjustTextSizeToRect(Vector2 rectSize, const char* text)
 {
+	if (!text){
+		GRUI_ERROR("_GRUI_AdjustTextSizeToRect", "text is NULL");
+		return;
+	}
+
 	int fontSize = GuiGetStyle(DEFAULT, TEXT_SIZE);
 
 	Vector2 baseMeasure = MeasureTextEx(GuiGetFont(), text, fontSize, GuiGetStyle(DEFAULT, TEXT_SPACING));
@@ -454,7 +459,9 @@ bool GRUI_Button(
 	if (_GRUI_IsElementCullable(uiElement.rect))
 		return false;
 
-	_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width, uiElement.rect.height}, text);
+	if (text)
+		_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width, uiElement.rect.height}, text);
+
 	return GuiButton(uiElement.rect, text);
 }
 
@@ -552,10 +559,10 @@ void GRUI_CheckBox(
 	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
 	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
 
-	_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width, uiElement.rect.height}, text);
-
-	if (context.containerStack.elementCount > 0)
+	if (text && context.containerStack.elementCount > 0)
 	{
+		_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width, uiElement.rect.height}, text);
+
 		struct Container* container = DYArrayGetElement(&context.containerStack, context.containerStack.elementCount - 1);
 
 		float fontSize = (float)GuiGetStyle(DEFAULT, TEXT_SIZE);
@@ -588,6 +595,11 @@ void GRUI_SelectableList(
 {
 	GRUI_ASSERT(frameContext.hasBegun);
 
+	if (!elements){
+		GRUI_ERROR("GRUI_SelectableList", "elements are NULL");
+		return;
+	}
+
 	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
 	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
 
@@ -608,7 +620,8 @@ void GRUI_Label(
 	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
 	_GRUI_AdjustRect(&uiElement, false);
 
-	_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width, uiElement.rect.height}, text);
+	if (text)
+		_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width, uiElement.rect.height}, text);
 
 	GuiLabel(uiElement.rect, text);
 }
