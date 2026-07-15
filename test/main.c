@@ -49,6 +49,8 @@ int main()
 		"Nemico"
 	};
 
+	Texture2D closeIcon = LoadTexture("closeIcon.png");
+
 	while (!exitWindow)
 	{
 		if (WindowShouldClose()) break;
@@ -78,17 +80,12 @@ int main()
 			printf("%d\n", activeIndex);
 		}
 
-		GRUI_Label(0, 0, 0.2, 0.2, 0, 0, "Questa è una label");
+		GRUI_Label(0, 0, 0.2, 0.2, 0, 0, "#146# Ciao amico");
 		GRUI_CheckBox(0, 0, 0.2, 0.5, 0, 0, "Box", &exitWindow, true);
 
 		GRUI_ColorPicker(0, 0, 0.075f, 0.65f, 0, 0, &backgroundColor, true);
 
-		GRUI_SelectableList(0, 0, 0.0f, 0.5f, 0, 0, elements, 6, &scrollIndex, &activeIndex, true);
-		GRUI_SelectableList(0, 0, 0.0f, 0.5f, 0, 0, elements, 6, &scrollIndex, &activeIndex, true);
-		GRUI_SelectableList(0, 0, 0.0f, 0.5f, 0, 0, elements, 6, &scrollIndex, &activeIndex, true);
-		GRUI_SelectableList(0, 0, 0.0f, 0.5f, 0, 0, elements, 6, &scrollIndex, &activeIndex, true);
-
-		GRUI_ColorPicker(0, 0, 0.075f, 0.65f, 0, 0, &backgroundColor, true);
+		GRUI_IconButton(0, 0, 0, 0.2, 0, 0, closeIcon, 0.75f, GRAY, MAROON, true);
 
 		GRUI_EndContainer(&scroll);
 
@@ -96,6 +93,8 @@ int main()
 
 		EndDrawing();
 	}
+
+	UnloadTexture(closeIcon);
 
 	UnloadShader(shader);
 	CloseWindow();

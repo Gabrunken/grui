@@ -148,6 +148,7 @@ void _GRUI_AdjustTextSizeToRect(Vector2 rectSize, const char* text)
 	float finalScaleFactor = fmin(scaleFactor.x, scaleFactor.y);
 
 	GuiSetStyle(DEFAULT, TEXT_SIZE, fontSize * finalScaleFactor);
+	GuiSetIconScale((baseMeasure.y * scaleFactor.y) / 16.0f);
 }
 
 //Adjusts the passed ui element to fit the last container in the stack.
@@ -445,6 +446,50 @@ bool GRUI_Button(
 
 	_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width, uiElement.rect.height}, text);
 	return GuiButton(uiElement.rect, text);
+}
+
+bool GRUI_IconButton(
+    float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    Texture2D icon,
+    float iconScale,
+    Color idleColor,
+    Color hoverColor,
+    bool maintainAspectRatio
+)
+{
+	GRUI_ASSERT(frameContext.hasBegun);
+
+	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
+	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
+
+	if (_GRUI_IsElementCullable(uiElement.rect))
+		return false;
+
+	bool buttonResult = GuiButton(uiElement.rect, NULL);
+	bool isHovering = CheckCollisionPointRec(frameContext.mousePosition, uiElement.rect);
+
+	//Draw icon
+
+	Vector2 iconScaleFactor =
+	{
+		uiElement.rect.width / icon.width,
+		uiElement.rect.height / icon.height
+	};
+
+	icon.width *= iconScaleFactor.x * iconScale;
+	icon.height *= iconScaleFactor.y * iconScale;
+
+	Vector2 finalTexturePosition =
+	{
+		uiElement.rect.width / 2.0f - icon.width / 2.0f + uiElement.rect.x,
+		uiElement.rect.height / 2.0f - icon.height / 2.0f + uiElement.rect.y,
+	};
+
+	DrawTexture(icon, finalTexturePosition.x, finalTexturePosition.y, isHovering ? hoverColor : idleColor);
+
+	return buttonResult;
 }
 
 void GRUI_ColorPicker(

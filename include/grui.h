@@ -97,6 +97,17 @@ bool GRUI_Button(
     bool maintainAspectRatio
 );
 
+bool GRUI_IconButton(
+    float posX, float posY,
+    float width, float height,
+    float originX, float originY,
+    Texture2D icon,
+    float iconScale,
+    Color idleColor,
+    Color hoverColor,
+    bool maintainAspectRatio
+);
+
 /*
  * todo doc
  */
