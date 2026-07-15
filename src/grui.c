@@ -306,7 +306,8 @@ void GRUI_BeginContainer(
 	struct Container container = {0};
 	container.alignment = alignment;
 	container.type = type;
-	container.scroll = *scroll;
+	if (scroll)
+		container.scroll = *scroll;
 
 	struct UIElement uiElement;
 	container.uiElement.rect.x = posX;
@@ -334,6 +335,8 @@ void GRUI_BeginContainer(
     {
         GuiUnlock();
     }
+
+	if (!containerStyle) return;
 
 	if (containerStyle->fillColor.a != 0)
 	{
@@ -386,14 +389,17 @@ void GRUI_EndContainer(Vector2* scroll)
 
 	struct Container* container = DYArrayGetElement(&context.containerStack, context.containerStack.elementCount - 1);
 
-	Rectangle view;
-	Rectangle content;
-	if (container->type == Row) {content.width = container->contentPixelSize - 20; content.height = container->uiElement.rect.height - 20;}
-	else {content.height = container->contentPixelSize - 20; content.width = container->uiElement.rect.width - 20;}
-	content.x = container->uiElement.rect.x;
-	content.y = container->uiElement.rect.y;
+	if (scroll)
+	{
+		Rectangle view;
+		Rectangle content;
+		if (container->type == Row) {content.width = container->contentPixelSize - 20; content.height = container->uiElement.rect.height - 20;}
+		else {content.height = container->contentPixelSize - 20; content.width = container->uiElement.rect.width - 20;}
+		content.x = container->uiElement.rect.x;
+		content.y = container->uiElement.rect.y;
 
-	GuiScrollPanel(container->uiElement.rect, NULL, content, scroll, &view);
+		GuiScrollPanel(container->uiElement.rect, NULL, content, scroll, &view);
+	}
 
 	EndScissorMode();
 	GuiUnlock();
