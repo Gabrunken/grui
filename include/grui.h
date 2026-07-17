@@ -71,7 +71,7 @@ void GRUI_BeginContainer(
     float outerMargin,
     float elementMargin,
     const struct ContainerStyle* containerStyle,
-    bool maintainAspectRatio);
+    bool squareAspectRatio);
 
 /*
  * todo doc
@@ -94,7 +94,7 @@ bool GRUI_Button(
     float width, float height,
     float originX, float originY,
     const char* text,
-    bool maintainAspectRatio
+    bool squareAspectRatio
 );
 
 bool GRUI_IconButton(
@@ -105,7 +105,7 @@ bool GRUI_IconButton(
     float iconScale,
     Color idleColor,
     Color hoverColor,
-    bool maintainAspectRatio
+    bool squareAspectRatio
 );
 
 /*
@@ -116,7 +116,7 @@ void GRUI_ColorPicker(
     float width, float height,
     float originX, float originY,
     Color* outColor,
-    bool maintainAspectRatio
+    bool squareAspectRatio
 );
 
 /*
@@ -130,7 +130,7 @@ void GRUI_CheckBox(
     float originX, float originY,
     const char *text,
     bool* outBool,
-    bool maintainAspectRatio
+    bool squareAspectRatio
 );
 
 void GRUI_SelectableList(
@@ -141,7 +141,7 @@ void GRUI_SelectableList(
     size_t elementCount,
     int* outScrollIndex,
     int* outActive,
-    bool maintainAspectRatio
+    bool squareAspectRatio
 );
 
 void GRUI_Label(

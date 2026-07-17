@@ -162,7 +162,7 @@ void _GRUI_AdjustTextSizeToRect(Vector2 rectSize, const char* text)
 
 //Adjusts the passed ui element to fit the last container in the stack.
 //Also stacks up the current element size in the container's contentPixelSize param.
-void _GRUI_AdjustRect(struct UIElement* element, bool maintainAspectRatio)
+void _GRUI_AdjustRect(struct UIElement* element, bool squareAspectRatio)
 {
 	GRUI_ASSERT(frameContext.hasBegun && element);
 
@@ -173,7 +173,7 @@ void _GRUI_AdjustRect(struct UIElement* element, bool maintainAspectRatio)
 		if (parent->type == Row)
 		{
 			element->rect.height *= parent->uiElement.rect.height;
-			if (maintainAspectRatio)
+			if (squareAspectRatio)
 			{
 				element->rect.width = element->rect.height;
 			}
@@ -187,7 +187,7 @@ void _GRUI_AdjustRect(struct UIElement* element, bool maintainAspectRatio)
 		else if (parent->type == Column)
 		{
 			element->rect.width *= parent->uiElement.rect.width;
-			if (maintainAspectRatio)
+			if (squareAspectRatio)
 			{
 				element->rect.height = element->rect.width;
 			}
@@ -276,7 +276,7 @@ void _GRUI_AdjustRect(struct UIElement* element, bool maintainAspectRatio)
 
 	//Use window bounds as a generic container
 	element->rect.width *= frameContext.windowSize.x;
-	if (maintainAspectRatio)
+	if (squareAspectRatio)
 	{
 		element->rect.height = element->rect.width;
 	}
@@ -303,7 +303,7 @@ void GRUI_BeginContainer(
     float outerMargin,
     float elementMargin,
     const struct ContainerStyle* containerStyle,
-    bool maintainAspectRatio
+    bool squareAspectRatio
 )
 {
 	GRUI_ASSERT(frameContext.hasBegun);
@@ -324,7 +324,7 @@ void GRUI_BeginContainer(
 	container.outerMargin = outerMargin;
 	container.elementMargin = elementMargin;
 
-	_GRUI_AdjustRect(&container.uiElement, maintainAspectRatio);
+	_GRUI_AdjustRect(&container.uiElement, squareAspectRatio);
 
 	DYArrayAddElement(&context.containerStack, &container);
 
@@ -443,7 +443,7 @@ bool GRUI_Button(
     float width, float height,
     float originX, float originY,
     const char* text,
-    bool maintainAspectRatio
+    bool squareAspectRatio
 )
 {
 	GRUI_ASSERT(frameContext.hasBegun);
@@ -454,7 +454,7 @@ bool GRUI_Button(
 	}
 
 	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
-	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
+	_GRUI_AdjustRect(&uiElement, squareAspectRatio);
 
 	if (_GRUI_IsElementCullable(uiElement.rect))
 		return false;
@@ -473,13 +473,13 @@ bool GRUI_IconButton(
     float iconScale,
     Color idleColor,
     Color hoverColor,
-    bool maintainAspectRatio
+    bool squareAspectRatio
 )
 {
 	GRUI_ASSERT(frameContext.hasBegun);
 
 	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
-	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
+	_GRUI_AdjustRect(&uiElement, squareAspectRatio);
 
 	if (_GRUI_IsElementCullable(uiElement.rect))
 		return false;
@@ -514,13 +514,13 @@ void GRUI_ColorPicker(
     float width, float height,
     float originX, float originY,
     Color* outColor,
-    bool maintainAspectRatio
+    bool squareAspectRatio
 )
 {
 	GRUI_ASSERT(frameContext.hasBegun);
 
 	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
-	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
+	_GRUI_AdjustRect(&uiElement, squareAspectRatio);
 
 	if (context.containerStack.elementCount > 0)
 	{
@@ -551,13 +551,13 @@ void GRUI_CheckBox(
     float originX, float originY,
     const char *text,
     bool* outBool,
-    bool maintainAspectRatio
+    bool squareAspectRatio
 )
 {
 	GRUI_ASSERT(frameContext.hasBegun);
 
 	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
-	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
+	_GRUI_AdjustRect(&uiElement, squareAspectRatio);
 
 	if (text && context.containerStack.elementCount > 0)
 	{
@@ -590,7 +590,7 @@ void GRUI_SelectableList(
     size_t elementCount,
     int* outScrollIndex,
     int* outActive,
-    bool maintainAspectRatio
+    bool squareAspectRatio
 )
 {
 	GRUI_ASSERT(frameContext.hasBegun);
@@ -601,7 +601,7 @@ void GRUI_SelectableList(
 	}
 
 	struct UIElement uiElement = {(Rectangle){posX, posY, width, height}, (Vector2){originX, originY}};
-	_GRUI_AdjustRect(&uiElement, maintainAspectRatio);
+	_GRUI_AdjustRect(&uiElement, squareAspectRatio);
 
 	_GRUI_AdjustTextSizeToRect((Vector2){uiElement.rect.width * 0.5, uiElement.rect.height * 0.5}, "Prova");
 
